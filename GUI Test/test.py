@@ -34,6 +34,32 @@ body_tex = "B"
 def constrain(val, min_val, max_val):
     return min(max_val, max(min_val, val))
 
+
+class ManualSignals(QObject):
+    straight = pyqtSignal(str)
+    left = pyqtSignal(str)
+    right = pyqtSignal(str)
+
+
+class ManualScreen(QtGui.QWidget):
+    def __init__(self):
+        super(self.__class__, self).__init__()
+        uic.loadUi('manual_move_screen.ui', self)
+        self.signals = ManualSignals()
+        self.pushButton.clicked.connect(self.straight_callback)
+        self.pushButton_3.clicked.connect(self.right_callback)
+        self.pushButton_4.clicked.connect(self.left_callback)
+
+    def straight_callback(self):
+        self.signals.straight.emit("S")
+
+    def right_callback(self):
+        self.signals.right.emit("R")
+
+    def left_callback(self):
+        self.signals.left.emit("L")
+
+
 class MainScreen(QtGui.QMainWindow):
     def __init__(self):
         global play_space
@@ -43,6 +69,11 @@ class MainScreen(QtGui.QMainWindow):
         '''
         super(self.__class__, self).__init__()
         uic.loadUi('test.ui', self)
+        self.manual_screen = ManualScreen()
+        self.manual_screen.signals.straight.connect(self.go_straight)
+        self.manual_screen.signals.left.connect(self.go_left)
+        self.manual_screen.signals.right.connect(self.go_right)
+
         self.tableWidget.cellDoubleClicked.connect(self.cellClicked_callback)
         self.pushButton.clicked.connect(self.setSize_callback)
         self.pushButton_4.clicked.connect(self.randomWall_callback)
@@ -51,6 +82,153 @@ class MainScreen(QtGui.QMainWindow):
         self.n = 0
         self.snake_body = []
         self.snake_direction = "North"
+
+        main_menu = self.menuBar()
+        file_menu = main_menu.addMenu('&File')
+
+        manual_action = QtGui.QAction("&Manual Move", self)
+        manual_action.setStatusTip("Manually move snake")
+        manual_action.triggered.connect(self.manual_move)
+        file_menu.addAction(manual_action)
+
+    def manual_move(self):
+        self.manual_screen.show()
+
+    def draw_snake(self):
+        for i in self.snake_body:
+            self.tableWidget.setItem(i[0],i[1] , QtGui.QTableWidgetItem(body_tex))
+            play_space[i[0], i[1]] = body_num
+
+        self.tableWidget.setItem(self.snake_body[0][0], self.snake_body[0][1], QtGui.QTableWidgetItem(head_tex))
+        play_space[self.snake_body[0][0], self.snake_body[0][1]] = head_num
+
+    def erase_snake(self):
+        for i in self.snake_body:
+            self.tableWidget.setItem(i[0],i[1] , QtGui.QTableWidgetItem(empty_tex))
+            play_space[i[0], i[1]] = empty_num
+
+    def north_safe(self):
+        return (self.north_empty() or self.north_food())
+    def north_empty(self):
+        return play_space[self.snake_body[0][0]-1, self.snake_body[0][1]] == empty_num
+    def north_food(self):
+        print "looking for food at {},{} and its {}".format(self.snake_body[0][0]-1, self.snake_body[0][1], play_space[self.snake_body[0][0]-1, self.snake_body[0][1]] == food_num)
+        return play_space[self.snake_body[0][0]-1, self.snake_body[0][1]] == food_num
+    def north_wall(self):
+        return (play_space[self.snake_body[0][0]-1, self.snake_body[0][1]] == wall_num or
+                play_space[self.snake_body[0][0]-1, self.snake_body[0][1]] == body_num or
+                play_space[self.snake_body[0][0]-1, self.snake_body[0][1]] == head_num )
+
+    def go_north(self):
+        print "trying to go north"
+        if(self.snake_body[0][0]-1 < 0):
+            print "collision with north wall"
+        elif(self.north_safe()):
+            self.snake_direction = "North"
+
+            self.erase_snake()
+
+            if (self.north_food()):
+                print "eating food"
+                print "snake body"
+                print self.snake_body
+                print "snake body -1"
+                print self.snake_body[-1]
+
+                self.snake_body = self.snake_body.append([self.snake_body[-1]], axis=0)
+
+            self.snake_body = np.roll(self.snake_body,1,0)
+
+            self.snake_body[0] = [self.snake_body[1][0]-1, self.snake_body[1][1]]
+
+            self.draw_snake()
+        else:
+            print "collision with wall"
+
+    def go_east(self):
+        print "trying to go east"
+        if(self.snake_body[0][1]+1 >= self.n ):
+            print "collision with east wall"
+        elif(play_space[self.snake_body[0][0], self.snake_body[0][1]+1] == empty_num):
+            self.snake_direction = "East"
+
+            self.erase_snake()
+            self.snake_body = np.roll(self.snake_body,1,0)
+            self.snake_body[0] = [self.snake_body[1][0], self.snake_body[1][1]+1]
+
+            self.draw_snake()
+        else:
+            print "collision with wall"
+
+    def go_south(self):
+        print "trying to go south"
+        if(self.snake_body[0][0]+1 >= self.n ):
+            print "collision with south wall"
+        elif(play_space[self.snake_body[0][0]+1, self.snake_body[0][1]] == empty_num):
+            self.snake_direction = "South"
+
+            self.erase_snake()
+
+            self.snake_body = np.roll(self.snake_body,1,0)
+            self.snake_body[0] = [self.snake_body[1][0]+1 , self.snake_body[1][1]]
+
+            self.draw_snake()
+        else:
+            print "collision with wall"
+
+    def go_west(self):
+        print "trying to go west"
+        if(self.snake_body[0][1]-1 < 0):
+            print "collision with west wall"
+        elif(play_space[self.snake_body[0][0], self.snake_body[0][1]-1] == empty_num):
+            self.snake_direction = "West"
+
+            self.erase_snake()
+
+            self.snake_body = np.roll(self.snake_body,1,0)
+            self.snake_body[0] = [self.snake_body[1][0] , self.snake_body[1][1]-1]
+
+            self.draw_snake()
+
+        else:
+            print "collision with wall"
+
+
+
+
+    def go_straight(self):
+        print "trying to go straight"
+        if(self.snake_direction == "North"):
+            self.go_north()
+        elif(self.snake_direction == "East"):
+            self.go_east()
+        elif(self.snake_direction == "South"):
+            self.go_south()
+        elif(self.snake_direction == "West"):
+            self.go_west()
+
+    def go_left(self):
+        print "trying to go left"
+        if(self.snake_direction == "North"):
+            self.go_west()
+        elif(self.snake_direction == "East"):
+            self.go_north()
+        elif(self.snake_direction == "South"):
+            self.go_east()
+        elif(self.snake_direction == "West"):
+            self.go_south()
+
+
+    def go_right(self):
+        print "trying to go right"
+        if(self.snake_direction == "North"):
+            self.go_east()
+        elif(self.snake_direction == "East"):
+            self.go_south()
+        elif(self.snake_direction == "South"):
+            self.go_west()
+        elif(self.snake_direction == "West"):
+            self.go_north()
 
     def setSize_callback(self):
         print "pressed the button"
@@ -75,6 +253,7 @@ class MainScreen(QtGui.QMainWindow):
     def cellClicked_callback(self, row, col):
         if(self.tableWidget.item(row, col) != None and self.tableWidget.item(row, col).text() == wall_tex):
             self.tableWidget.setItem(row, col, QtGui.QTableWidgetItem(food_tex))
+            print "food at at row:{} col{}".format(row,col)
             play_space[row, col] = food_num
         elif(self.tableWidget.item(row, col) != None and self.tableWidget.item(row, col).text() == food_tex):
             self.tableWidget.setItem(row, col, QtGui.QTableWidgetItem(empty_tex))
@@ -186,6 +365,7 @@ class MainScreen(QtGui.QMainWindow):
                         print "looking in {}".format(self.snake_direction)
                         first_body = False
                     self.tableWidget.setItem(cell[0], cell[1], QtGui.QTableWidgetItem(body_tex))
+                    play_space[cell[0],cell[1]] = body_num
                     random_head_row = cell[0]
                     random_head_col = cell[1]
                     self.snake_body.append(cell)
