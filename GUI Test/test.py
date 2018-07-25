@@ -87,7 +87,7 @@ class PathScreen(QtGui.QWidget):
 
                 new_path = form.algorithm.create_new_path(string_a, string_b)
                 self.add_path_without_rank(new_path)
-                print "-----"
+                # print "-----"
 
     def add_path_with_rank(self, path, rank):
         current_row = self.tableWidget.rowCount()
@@ -158,7 +158,7 @@ class genetic_algorithm():
             local_fitness = float(food+local_day*3)/float(local_day)
         except:
             local_fitness = 0
-        print "days:{}, food:{}, fitness:{}".format(local_day, food, local_fitness)
+        #print "days:{}, food:{}, fitness:{}".format(local_day, food, local_fitness)
         if local_fitness > self.best_fitness:
             self.second_best_fitness = self.best_fitness
             self.best_fitness = local_fitness
