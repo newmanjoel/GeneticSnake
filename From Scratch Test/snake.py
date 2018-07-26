@@ -42,7 +42,7 @@ class SnakeDeath(Exception):
 
 class Brain():
     def __init__(self):
-        self.n = 50
+        self.n = 100
         self.path = ""
         self.mutate_rate = 2  # 2 % mutation rate
         self.random_path()
@@ -238,7 +238,6 @@ class Snake():
         self.died_by = 0
         self.last_food = 0
 
-
         self.name = ""
 
     def get_snake(self):
@@ -251,26 +250,22 @@ class Snake():
         return self.alive == 1
 
     def have_child(self, parentB):
+        ''' Only thing that matters is the path, everything else if set later '''
         child = Snake()
-        #child.brain.path = self.brain.path
         child.brain.path = copy.deepcopy(self.brain.mix(parentB))
-        # dont think i needs these due to the set_all function
-        #child.body = copy.deepcopy(self.body)
-        #child.direction = copy.deepcopy(self.direction)
         return child
 
     def roll(self, array_to_roll):
-        if(len(array_to_roll) < 1):
-            raise BodySizeToSmall("Tried to roll a body that was less than 1")
+        ''' see https://docs.scipy.org/doc/numpy-1.14.0/reference/generated/numpy.roll.html'''
         x = deque(array_to_roll)
         x.rotate(1)
         return list(x)
 
     def ate_food(self, add_food=1):
+        ''' this is called every time food is eaten '''
         self.food += 1
         self.body.append(self.body[-1])
         self.last_food = self.turns_alive
-        #self.calculate_fitness()
 
     def redraw(self):
         self.world.clear_board()
@@ -286,10 +281,6 @@ class Snake():
                 self.died_by = self.world.food
 
     def calculate_fitness(self):
-        #if(self.turns_alive != 0):
-        #    self.fitness += (1.0/self.turns_alive)*self.food**3 #  incremental update of fitness?
-        #else:
-        #    self.fitness += self.turns_alive*0.25
         turn_fitness = 0
         if(self.died_by == self.world.food):
             # reward eating all the food in the shortest amount of time
@@ -312,10 +303,6 @@ class Snake():
         return self.world.north_of(self.body[0][0], self.body[0][1]) == self.world.empty
     def north_food(self):
         return self.world.north_of(self.body[0][0], self.body[0][1]) == self.world.food
-    def north_wall(self):
-        return (self.world.north_of(self.body[0][0], self.body[0][1]) == self.world.wall or
-                self.world.north_of(self.body[0][0], self.body[0][1]) == self.world.body or
-                self.world.north_of(self.body[0][0], self.body[0][1]) == self.world.head)
 
     def south_safe(self):
         return (self.south_empty() or self.south_food())
@@ -323,10 +310,6 @@ class Snake():
         return self.world.south_of(self.body[0][0], self.body[0][1]) == self.world.empty
     def south_food(self):
         return self.world.south_of(self.body[0][0], self.body[0][1]) == self.world.food
-    def south_wall(self):
-        return (self.world.south_of(self.body[0][0], self.body[0][1]) == self.world.wall or
-                self.world.south_of(self.body[0][0], self.body[0][1]) == self.world.body or
-                self.world.south_of(self.body[0][0], self.body[0][1]) == self.world.head)
 
     def east_safe(self):
         return (self.east_empty() or self.east_food())
@@ -334,10 +317,6 @@ class Snake():
         return self.world.east_of(self.body[0][0], self.body[0][1]) == self.world.empty
     def east_food(self):
         return self.world.east_of(self.body[0][0], self.body[0][1]) == self.world.food
-    def east_wall(self):
-        return (self.world.east_of(self.body[0][0], self.body[0][1]) == self.world.wall or
-                self.world.east_of(self.body[0][0], self.body[0][1]) == self.world.body or
-                self.world.east_of(self.body[0][0], self.body[0][1]) == self.world.head)
 
     def west_safe(self):
         return (self.west_empty() or self.west_food())
@@ -345,10 +324,6 @@ class Snake():
         return self.world.west_of(self.body[0][0], self.body[0][1]) == self.world.empty
     def west_food(self):
         return self.world.west_of(self.body[0][0], self.body[0][1]) == self.world.food
-    def west_wall(self):
-        return (self.world.west_of(self.body[0][0], self.body[0][1]) == self.world.wall or
-                self.world.west_of(self.body[0][0], self.body[0][1]) == self.world.body or
-                self.world.west_of(self.body[0][0], self.body[0][1]) == self.world.head)
 
     def a_valid_path(self, row, col):
         return (self.world.north_of(row, col) < 2 or
@@ -357,14 +332,8 @@ class Snake():
                 self.world.west_of(row, col) < 2)
 
     def move_north(self):
-        #print "orignal"
-        #print self.body
         self.body = self.roll(self.body)
-        #print "rolled"
-        #print self.body
         self.body[0] = [self.body[1][0]-1, self.body[1][1]]
-        #print "moved head up 1"
-        #print self.body
         self.redraw()
 
     def move_south(self):
@@ -383,79 +352,52 @@ class Snake():
         self.redraw()
 
     def go_north(self):
-        if(self.alive == 0):
-            raise SnakeDeath("the snake is already dead", self.turns_alive, self.food, self.brain.path)
         if(self.north_safe()):
             self.direction = "North"
             if (self.north_food()):
-                #print "n: {} ,s: {}, f: {}".format(self.name, [self.body[0][0]-1, self.body[0][1]],self.world.foods)
                 if([self.body[0][0]-1, self.body[0][1]] in self.world.foods):
                     self.world.foods.remove([self.body[0][0]-1, self.body[0][1]])
-                else:
-                    print "Theres a food issue north"
-                    print "n: {} ,s: {}, f: {}".format(self.name, [self.body[0][0]-1, self.body[0][1]],self.world.foods)
                 self.ate_food()
-
             self.move_north()
         else:
-            #print "collision with wall at {},{}".format(self.body[0][0]-1, self.body[0][1])
             self.alive = 0
             self.died_by = self.world.wall
-            raise SnakeDeath("died at {},{}".format(self.body[0][0]-1, self.body[0][1]), self.turns_alive, self.food, self.brain.path)
 
     def go_east(self):
-        if(self.alive == 0):
-            raise SnakeDeath("the snake is already dead", self.turns_alive, self.food, self.brain.path)
         if(self.east_safe()):
             self.direction = "East"
             if (self.east_food()):
                 self.ate_food()
                 if ([self.body[0][0], self.body[0][1]+1] in self.world.foods):
                     self.world.foods.remove([self.body[0][0], self.body[0][1]+1])
-                else:
-                    print "Theres a food issue east"
             self.move_east()
         else:
-            #print "collision with wall at {},{}".format(self.body[0][0], self.body[0][1]+1)
             self.alive = 0
             self.died_by = self.world.wall
-            raise SnakeDeath("died at {},{}".format(self.body[0][0], self.body[0][1]+1), self.turns_alive, self.food, self.brain.path)
 
     def go_south(self):
-        if(self.alive == 0):
-            raise SnakeDeath("the snake is already dead", self.turns_alive, self.food, self.brain.path)
         if(self.south_safe()):
             self.direction = "South"
             if (self.south_food()):
                 self.ate_food()
                 if ([self.body[0][0]+1, self.body[0][1]] in self.world.foods):
                     self.world.foods.remove([self.body[0][0]+1, self.body[0][1]])
-                else:
-                    print "Theres a food issue south"
             self.move_south()
         else:
-            #print "collision with wall at {},{}".format(self.body[0][0]+1, self.body[0][1])
             self.alive = 0
             self.died_by = self.world.wall
-            raise SnakeDeath("died at {},{}".format(self.body[0][0]+1, self.body[0][1]), self.turns_alive, self.food, self.brain.path)
 
     def go_west(self):
-        if(self.alive == 0):
-            raise SnakeDeath("the snake is already dead", self.turns_alive, self.food, self.brain.path)
         if(self.west_safe()):
             self.direction = "West"
             if (self.west_food()):
                 self.ate_food()
                 if ([self.body[0][0], self.body[0][1]-1] in self.world.foods):
                     self.world.foods.remove([self.body[0][0], self.body[0][1]-1])
-                else:
-                    print "Theres a food issue south"
             self.move_west()
         else:
-            #print "collision with wall at {},{}".format(self.body[0][0], self.body[0][1]-1)
             self.alive = 0
             self.died_by = self.world.wall
-            raise SnakeDeath("died at {},{}".format(self.body[0][0], self.body[0][1]-1), self.turns_alive, self.food, self.brain.path)
 
     def go_straight(self):
         if(self.direction == "North"):
@@ -501,6 +443,7 @@ class Snake():
             # just used for makeing sure everything ends on time
 
     def run_one(self):
+        ''' run one turn '''
         current_path = self.brain.path[self.turns_alive]
         self.run_path(current_path)
 
@@ -517,10 +460,9 @@ class Snake():
                     print "invalid path of {}, should be L R or S".format(i)
         except SnakeDeath as snake_ded:
             pass
-            #return self.algorithm.fitness(snake_ded.path, snake_ded.alive, snake_ded.food)
-        #return self.algorithm.fitness(self.brain.path, self.turns_alive, self.food)
 
     def generate_random_body(self):
+        ''' generate a random snake, this is only done on a empty world '''
         length = 2  # this is the length of the random generated snake
         row = random.randint(0, self.world.n - 1)
         col = random.randint(0, self.world.n - 1)
@@ -546,9 +488,6 @@ class Snake():
                     self.body[0] = [self.body[1][0], self.body[1][1]-1]
 
 
-
-
-
 class Population():
     def __init__(self, pop_num):
         self.n = pop_num
@@ -560,7 +499,7 @@ class Population():
         self.generation = 0
         self.max_snake = Snake()
         self.max_fitness = 0
-        self.best_samples = int(self.n*0.1)  # take 10% from the best everything else is random
+        self.best_samples = int(self.n*0.5)  # take 10% from the best everything else is random
 
         self.duplication_dict = {}
 
@@ -590,12 +529,14 @@ class Population():
             self.snakes[i].world.walls = copy.deepcopy(wall)
 
     def best_snake(self):
+        local_max = 0
         for i in range(self.n):
             if(self.snakes[i].fitness >= self.max_fitness):
                 self.max_fitness = self.snakes[i].fitness
                 self.max_snake = copy.deepcopy(self.snakes[i])
                 self.snakes[i].best_snake = True
-        #print self.max_snake.world.fancy_print_world()
+            local_max = max(self.snakes[i].fitness, local_max)
+        return local_max
 
     def set_all_properties(self, master_snake):
         self.set_all_snake_bodies(copy.deepcopy(master_snake.body),copy.deepcopy(master_snake.direction))
@@ -642,20 +583,19 @@ class Population():
         # the operator.itemgetter(1) just says that it is looking at the second object in the item as the item (key, fitness)
 
     def select_parent(self, i):
+        '''
+        picks from the best X% and all others are from a random location
+        It IS possbile to randomly choose to breed with a 'good' snake
+        '''
         if i < self.best_samples:
             random_good_parent = random.randint(0, self.best_samples)
-            #print "trying to return type {} which is {}".format(type(self.sorted_population[random_good_parent]), self.sorted_population[random_good_parent])
             return self.snakes[self.sorted_population[random_good_parent][0]]
         random_point = random.randint(0, int(self.get_fitness_sum()))
         result = 0
         for i in range(self.n):
             result += self.snakes[i].fitness
             if(result >= random_point):
-                # this is the parent
                 return self.snakes[i]
-        print "the random point was {} and the fitness sum was {}".format(random_point, self.get_fitness_sum())
-        raise ValueError("I should never have sorted the snakes!")
-
 
     def get_fitness_sum(self):
         result = 0
@@ -663,73 +603,43 @@ class Population():
             result += self.snakes[i].fitness
         return result
 
-
-class MyLine(lines.Line2D):
-    ''' Taken from https://matplotlib.org/examples/api/line_with_text.html '''
-    def __init__(self, *args, **kwargs):
-        # we'll update the position when the line data is set
-        self.text = mtext.Text(0, 0, '')
-        lines.Line2D.__init__(self, *args, **kwargs)
-
-        # we can't access the label attr until *after* the line is
-        # inited
-        self.text.set_text(self.get_label())
-
-    def set_figure(self, figure):
-        self.text.set_figure(figure)
-        lines.Line2D.set_figure(self, figure)
-
-    def set_axes(self, axes):
-        self.text.set_axes(axes)
-        lines.Line2D.set_axes(self, axes)
-
-    def set_transform(self, transform):
-        # 2 pixel offset
-        texttrans = transform + mtransforms.Affine2D().translate(2, 2)
-        self.text.set_transform(texttrans)
-        lines.Line2D.set_transform(self, transform)
-
-    def set_data(self, x, y):
-        if len(x):
-            self.text.set_position((x[-1], y[-1]))
-
-        lines.Line2D.set_data(self, x, y)
-
-def display_best_snake_moving(snek, ax):
+def display_best_snake_moving(snek, run_once = False):
     ''' snek is a snake object that was the orignal with the path from the best '''
-
-    #plt.pause(1)
-    ax.plot([0],[0])
+    plt.subplot(212)
     while snek.is_alive():
-        snek.run_one()
+        if not run_once:
+            snek.run_one()
         plt.cla()
-        ax.set_xlim(-1, 11)
-        ax.set_ylim(11, -1)
-
+        plt.xlim(-1, 10)
+        plt.ylim(10, -1)
         xdata, ydata = [], []
 
         for bod in snek.body:
             # bod is [row, col] which translates to [y,x]
             xdata.append(bod[1])
             ydata.append(bod[0])
-
-        ax.plot(xdata, ydata)
+        # plot the body and the head
+        plt.plot(xdata, ydata, linewidth=5.0)
+        plt.scatter(xdata[0],ydata[0], s=60, c='cyan')
 
         for fud in snek.world.foods:
             # fud is [row, col] which translates to [y,x]
-            ax.scatter(fud[1], fud[0], s = 60, c = 'red')
+            plt.scatter(fud[1], fud[0], s=60, c='red')
 
         for wal in snek.world.walls:
             # wal is [row, col] which translates to [y,x]
-            ax.scatter(wal[1], wal[0], s = 60, c = 'black')
+            plt.scatter(wal[1], wal[0], s=60, c='black')
+
+        plt.plot([0, 0, 9, 9, 0], [0, 9, 9, 0, 0], c='black')
 
         plt.xticks(range(-1, 11, 1))
         plt.yticks(range(-1, 11, 1))
-        plt.grid(which = 'minor')
+        plt.grid(which = 'both')
         plt.title("Turn: {}, Food: {}, Food Left: {}".format(snek.turns_alive, snek.food, len(snek.world.foods)))
         plt.show()
         plt.pause(0.2)
-    print "ALL DONE"
+        if run_once:
+            break
 
 
 
@@ -743,57 +653,50 @@ if(__name__ == "__main__"):
     snake1.world.random_generator(1, snake1.world.wall)
     print snake1.world.fancy_print_world()
     fitnesses = []
+    local_fitness = []
+    rolling_average = []
     bodies = []
 
-    population_limit = 10
-    population_generations = 400
+    population_limit = 100
+    population_generations = 200
     little_more = False
 
     test = Population(population_limit)
     test.set_all_properties(snake1)
 
-    fig, (ax1, ax2) = plt.subplots(nrows = 2, ncols = 1)
+    display_best_snake_moving(snake1, True)
 
-
+    plt.subplot(211)
+    title = ''
     while(test.generation <= population_generations):
         if(not test.all_snakes_dead()):
             test.update()
         else:
             test.calculate_fitness()
-            test.best_snake()
+            local_fitness.append(test.best_snake())
+            rolling_average.append(np.average(local_fitness[-50:]))
             test.natural_selection()
             test.set_all_properties(snake1)
-
             test.mutate_babies()
-
             fitnesses.append(test.max_snake.fitness)
 
-            if(test.generation % 10 == 0):
-                print "generation: {}, fitness: {}, turns: {}, food: {}, food left: {}".format(
+            #if(test.generation % 10 == 0):
+            title =  "generation: {}, fitness: {:04}, turns: {}, food: {}, food left: {}".format(
                                                                 test.generation,
                                                                 test.max_snake.fitness,
                                                                 test.max_snake.last_food,
                                                                 test.max_snake.food,
                                                                 len(test.max_snake.world.foods))
                 #print test.max_snake.world.fancy_print_world()
-            ax1.cla()
-            ax1.plot(fitnesses)
-            #ax1.ylabel("fitness")
-            #ax1.xlabel("generation")
+            print title
+
+            plt.cla()
+            plt.plot(fitnesses)
+            plt.plot(local_fitness)
+            plt.plot(rolling_average)
+            plt.title(title)
             plt.show()
-            plt.pause(0.0001)
-
-            if(test.generation == population_generations and len(test.max_snake.world.foods) != 0 and little_more == False):
-                little_more = True
-                population_generations += 100
-                print "adding a bit more to see if we can get to zero food left"
-
-
-
-            #bodies.append(test.max_snake.body)
-
-
-
+            plt.pause(0.00001)
 
     print "done"
     print snake1.world.fancy_print_world()
@@ -806,5 +709,5 @@ if(__name__ == "__main__"):
     #plt.xlabel("generation")
     #plt.show()
     snake1.brain.path = test.max_snake.brain.path
-    display_best_snake_moving(snake1, ax2)
+    display_best_snake_moving(snake1)
 
