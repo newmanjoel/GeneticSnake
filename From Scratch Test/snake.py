@@ -46,7 +46,7 @@ class Brain():
         self.path = ""
         self.mutate_rate = 2  # 2 % mutation rate
         self.random_path()
-        self.chromo_length = 4
+        self.chromo_length = 3
 
     def random_path(self):
         self.path = ""
@@ -499,8 +499,8 @@ class Population():
         self.generation = 0
         self.max_snake = Snake()
         self.max_fitness = 0
-        self.best_samples = int(self.n*0.5)  # take 10% from the best everything else is random
-
+        self.best_samples = int(self.n*0.1)  # take 10% from the best everything else is random
+        self.average_fitness = 0
         self.duplication_dict = {}
 
     def update(self):
@@ -557,6 +557,7 @@ class Population():
             parentB = self.select_parent(i)
 
             self.babies[i] = copy.deepcopy(parentA.have_child(parentB))
+        self.babies[-1].brain.path = self.max_snake.brain.path #this ensures that the best always makes it
         self.snakes = copy.deepcopy(self.babies);
         self.babies = []
 
@@ -601,6 +602,7 @@ class Population():
         result = 0
         for i in range(self.n):
             result += self.snakes[i].fitness
+        self.average_fitness = float(result)/self.n
         return result
 
 def display_best_snake_moving(snek, run_once = False):
@@ -647,10 +649,14 @@ def display_best_snake_moving(snek, run_once = False):
 
 if(__name__ == "__main__"):
     snake1 = Snake()
-    snake1.generate_random_body()
+    snake1.body.append([5,5])
+    snake1.body.append([5,4])
+    #snake1.generate_random_body()
     snake1.world.draw_snake(snake1.body)
-    snake1.world.random_generator(10, snake1.world.food)
-    snake1.world.random_generator(1, snake1.world.wall)
+    snake1.world.foods = [[2, 6], [2, 1], [7, 3], [7, 5], [2, 8]]
+    snake1.redraw()
+    #snake1.world.random_generator(10, snake1.world.food)
+    #snake1.world.random_generator(1, snake1.world.wall)
     print snake1.world.fancy_print_world()
     fitnesses = []
     local_fitness = []
@@ -674,7 +680,9 @@ if(__name__ == "__main__"):
         else:
             test.calculate_fitness()
             local_fitness.append(test.best_snake())
-            rolling_average.append(np.average(local_fitness[-50:]))
+
+            rolling_average.append(test.average_fitness)
+
             test.natural_selection()
             test.set_all_properties(snake1)
             test.mutate_babies()
@@ -691,12 +699,13 @@ if(__name__ == "__main__"):
             print title
 
             plt.cla()
-            plt.plot(fitnesses)
+            #plt.plot(fitnesses)
             plt.plot(local_fitness)
             plt.plot(rolling_average)
             plt.title(title)
+            plt.legend(['Best Snake per generation', 'Average Snake per generation'], loc=2 )
             plt.show()
-            plt.pause(0.00001)
+            #plt.pause(0.00001)
 
     print "done"
     print snake1.world.fancy_print_world()
